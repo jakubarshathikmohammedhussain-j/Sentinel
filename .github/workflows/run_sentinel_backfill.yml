@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  run-backfill:
+  execute-backfill:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set up Python 3.10
@@ -20,7 +20,7 @@ jobs:
       - name: Install Dependencies
         run: pip install -r requirements.txt
 
-      - name: Execute 2-Year Landmark Backfill
+      - name: Run Programmatic Backfill
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
           SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
