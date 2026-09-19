@@ -1,35 +1,28 @@
-name: SENTINEL Master Pipeline
+name: SENTINEL+ Execution Node (Policy)
 
 on:
   schedule:
-    # 00:30 UTC corresponds to 6:00 AM IST (Monday-Friday)
-    - cron: '30 0 * * 1-5'
+    # Runs daily at 14:00 UTC (Monday - Friday)
+    - cron: '0 14 * * 1-5'
   workflow_dispatch:
 
 jobs:
-  run-sentinel:
+  execute-sentinel:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
-
-      - name: Set up Python 3.10
+        
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-          cache: 'pip'
-
+          
       - name: Install Dependencies
-        run: pip install -r requirements.txt
-
-      - name: Execute Pipeline
+        run: pip install requests google-cloud-bigquery
+        
+      - name: Execute SENTINEL Stream
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
-          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
-        run: python sentinel_recon.py
+        run: python sentinel_sync.py
         
