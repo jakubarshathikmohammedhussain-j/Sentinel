@@ -14,16 +14,14 @@ def main():
     client = bigquery.Client(credentials=credentials, project=creds_dict['project_id'])
     table_id = f"{creds_dict['project_id']}.telemetry_bronze.sentinel_policy"
 
-    # Match existing schema in BigQuery
     headers = {
-        "User-Agent": "HoloEarthPolicyResearch ResearchOps@holoearth.internal",
+        "User-Agent": "HoloEarthPolicyResearch Admin@holoearthdata.org",
         "Accept": "application/json"
     }
 
     start_date = (datetime.utcnow() - timedelta(days=10*365)).strftime('%Y-%m-%d')
     timestamp_iso = datetime.utcnow().isoformat()
 
-    # High-impact federal regulatory agencies
     target_agencies = [
         "defense-department",
         "energy-department",
@@ -38,7 +36,8 @@ def main():
     job_config = bigquery.LoadJobConfig(
         source_format=bigquery.SourceFormat.NEWLINE_DELIMITED_JSON,
         write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
-        ignore_unknown_values=True
+        ignore_unknown_values=True,
+        autodetect=True # Ensures safe schema merging
     )
 
     for agency in target_agencies:
@@ -46,10 +45,11 @@ def main():
         page = 1
         has_more = True
 
-        while has_more and page <= 50:  # Pull up to 5,000 top rules per agency
+        while has_more and page <= 50: 
+            # FIXED: API requires conditions[agencies][], not agency_slugs
             url = (
                 f"https://www.federalregister.gov/api/v1/documents.json"
-                f"?conditions[agency_slugs][]={agency}"
+                f"?conditions[agencies][]={agency}"
                 f"&conditions[publication_date][gte]={start_date}"
                 f"&conditions[type][]=RULE"
                 f"&per_page=100"
@@ -65,7 +65,6 @@ def main():
                         break
 
                     for rule in results:
-                        # Matches your exact existing column structure
                         all_records.append({
                             "timestamp": timestamp_iso,
                             "publication_date": rule.get("publication_date", ""),
@@ -74,7 +73,6 @@ def main():
                             "signal_type": "FINAL_RULE"
                         })
 
-                    # Flush batch when size exceeds 3,000 records
                     if len(all_records) >= 3000:
                         client.load_table_from_json(all_records, table_id, job_config=job_config).result()
                         print(f"[SENTINEL] Loaded {len(all_records)} records into {table_id}.")
@@ -83,7 +81,7 @@ def main():
                     total_pages = data.get("total_pages", 1)
                     if page < total_pages:
                         page += 1
-                        time.sleep(0.2)
+                        time.sleep(0.3)
                     else:
                         has_more = False
                 elif resp.status_code == 429:
